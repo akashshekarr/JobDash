@@ -92,6 +92,26 @@ async def search(
         else:
             arrangement = "On-site"
 
+        # Salary: JSearch sometimes provides min/max + period + currency.
+        sal_min = j.get("job_min_salary")
+        sal_max = j.get("job_max_salary")
+        sal_cur = j.get("job_salary_currency") or ""
+        sal_period = j.get("job_salary_period") or ""
+        salary_text = ""
+        if sal_min or sal_max:
+            def fmt(n):
+                try:
+                    return f"{int(n):,}"
+                except (TypeError, ValueError):
+                    return str(n)
+            if sal_min and sal_max:
+                salary_text = f"{sal_cur} {fmt(sal_min)}–{fmt(sal_max)}"
+            else:
+                salary_text = f"{sal_cur} {fmt(sal_min or sal_max)}"
+            if sal_period:
+                salary_text += f" / {sal_period.lower()}"
+            salary_text = salary_text.strip()
+
         jobs.append(
             {
                 "id": j.get("job_id"),
@@ -108,6 +128,7 @@ async def search(
                 "posted": j.get("job_posted_at_datetime_utc"),
                 "apply": j.get("job_apply_link"),
                 "publisher": j.get("job_publisher"),
+                "salary": salary_text,
                 "description": (j.get("job_description") or "")[:320],
             }
         )

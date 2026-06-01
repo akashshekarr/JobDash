@@ -125,6 +125,32 @@
   .chip.remote { color: var(--lime); border-color: rgba(198,242,95,.3); }
   .chip.hybrid { color: var(--accent-2); border-color: rgba(255,209,102,.3); }
   .chip.posted { color: var(--muted); }
+  .chip.salary { color: var(--lime); border-color: rgba(198,242,95,.3); }
+
+  /* applied state */
+  .card.applied { border-color: rgba(198,242,95,.45); }
+  .card.applied::after {
+    content: "✓ Applied"; position: absolute; top: 14px; right: 14px;
+    font-size: 10.5px; font-weight: 700; color: #142b00; background: var(--lime);
+    padding: 3px 9px; border-radius: 999px; letter-spacing: .5px;
+  }
+  .appliedbtn {
+    background: var(--bg-soft); border: 1px solid var(--line); color: var(--muted);
+    border-radius: 11px; cursor: pointer; font-family: inherit; font-size: 12.5px;
+    font-weight: 600; padding: 0 12px; transition: .15s; flex-shrink: 0;
+  }
+  .appliedbtn:hover { border-color: var(--lime); color: var(--lime); }
+  .appliedbtn.on { background: rgba(198,242,95,.12); border-color: var(--lime); color: var(--lime); }
+
+  /* search history */
+  .history { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 18px 4px 0; }
+  .hist-label { color: var(--muted); font-size: 12px; letter-spacing: .5px; }
+  .hist-chip {
+    background: var(--panel); border: 1px solid var(--line); color: var(--ink);
+    border-radius: 999px; padding: 6px 13px; font-size: 12.5px; font-family: inherit;
+    cursor: pointer; transition: .15s;
+  }
+  .hist-chip:hover { border-color: var(--accent-2); color: var(--accent-2); }
   .desc { color: var(--muted); font-size: 13px; line-height: 1.5; flex-grow: 1; }
   .card-foot { display: flex; gap: 10px; align-items: center; margin-top: 2px; }
   .apply {
@@ -317,6 +343,8 @@
     <button class="go" id="go" onclick="newSearch()">Search</button>
   </div>
 
+  <div class="history" id="historyBox"></div>
+
   <div class="status" id="status">Type a role and hit search to pull live listings.</div>
   <div class="grid" id="grid"></div>
   <button class="more" id="more" style="display:none" onclick="loadMore()">Load more</button>
@@ -338,6 +366,8 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let page = 1, lastQ = "", lastLoc = "", lastType = "", lastArr = "", busy = false;
 let saved = [];          // loaded from Supabase for the logged-in user
+let applied = [];        // array of job_ids the user marked applied
+let searchHistory = [];  // recent searches
 let authMode = "signin"; // or "signup"
 let currentUser = null;
 
@@ -416,6 +446,8 @@ function showApp(){
   $("userEmail").textContent = currentUser.email || "Signed in";
   $("authSubmit").disabled = false;
   loadSaved();
+  loadApplied();
+  loadHistory();
 }
 
 function showLogin(){
@@ -470,6 +502,78 @@ async function toggleSave(job, btn){
   }
 }
 
+/* ===== Applied toggle (Supabase) ===== */
+async function loadApplied(){
+  const { data, error } = await sb.from("applied_jobs").select("job_id");
+  if(error){ console.error(error); return; }
+  applied = (data || []).map(r => r.job_id);
+}
+
+async function toggleApplied(job, btn, card){
+  const isApplied = applied.includes(job.id);
+  try {
+    if(isApplied){
+      const { error } = await sb.from("applied_jobs").delete()
+        .eq("user_id", currentUser.id).eq("job_id", job.id);
+      if(error) throw error;
+      applied = applied.filter(id => id !== job.id);
+      btn.classList.remove("on"); btn.textContent = "Mark applied";
+      card.classList.remove("applied");
+    } else {
+      const { error } = await sb.from("applied_jobs").insert({
+        user_id: currentUser.id, job_id: job.id
+      });
+      if(error) throw error;
+      applied.push(job.id);
+      btn.classList.add("on"); btn.textContent = "✓ Applied";
+      card.classList.add("applied");
+    }
+  } catch(err){
+    console.error(err);
+    alert("Couldn't update applied status: " + (err.message || "error"));
+  }
+}
+
+/* ===== Search history (Supabase) ===== */
+async function loadHistory(){
+  const { data, error } = await sb.from("search_history")
+    .select("query, location, emp_type, arrangement, created_at")
+    .order("created_at", { ascending: false }).limit(8);
+  if(error){ console.error(error); return; }
+  searchHistory = data || [];
+  renderHistory();
+}
+
+function renderHistory(){
+  const box = $("historyBox");
+  if(!box) return;
+  if(!searchHistory.length){ box.innerHTML = ""; return; }
+  box.innerHTML = `<span class="hist-label">Recent:</span>` + searchHistory.map((h, i) => {
+    const label = [h.query, h.location].filter(Boolean).join(" · ");
+    return `<button class="hist-chip" data-i="${i}">${label}</button>`;
+  }).join("");
+  [...box.querySelectorAll(".hist-chip")].forEach(el => {
+    el.onclick = () => {
+      const h = searchHistory[+el.dataset.i];
+      $("q").value = h.query || "";
+      $("loc").value = h.location || "";
+      $("type").value = h.emp_type || "";
+      $("arrangement").value = h.arrangement || "";
+      newSearch();
+    };
+  });
+}
+
+async function saveHistory(){
+  try {
+    await sb.from("search_history").insert({
+      user_id: currentUser.id, query: lastQ, location: lastLoc,
+      emp_type: lastType, arrangement: lastArr
+    });
+    loadHistory();
+  } catch(err){ console.error(err); }
+}
+
 async function newSearch(){
   const q = $("q").value.trim();
   if(!q){ $("status").textContent = "Enter a keyword first."; return; }
@@ -504,6 +608,7 @@ async function fetchJobs(fresh){
       data.jobs.forEach(addCard);
       $("status").textContent = `Showing results for “${lastQ}”${lastLoc ? " in " + lastLoc : ""}.`;
       $("more").style.display = data.jobs.length ? "block" : "none";
+      if(fresh) saveHistory();
     }
   } catch(err){
     $("status").textContent = "⚠ " + err.message;
@@ -529,6 +634,7 @@ function timeAgo(iso){
 
 function addCard(job){
   const isSaved = saved.some(s => s.id === job.id);
+  const isApplied = applied.includes(job.id);
   const logo = job.logo
     ? `<img class="logo" src="${job.logo}" onerror="this.outerHTML='<div class=\\'logo ph\\'>${(job.company||'?')[0]}</div>'" />`
     : `<div class="logo ph">${(job.company||'?')[0]}</div>`;
@@ -538,11 +644,12 @@ function addCard(job){
   else if(job.arrangement === "Hybrid") chips.push(`<span class="chip hybrid">Hybrid</span>`);
   else if(job.arrangement) chips.push(`<span class="chip">On-site</span>`);
   chips.push(`<span class="chip">${job.location}</span>`);
+  if(job.salary) chips.push(`<span class="chip salary">💰 ${job.salary}</span>`);
   const ago = timeAgo(job.posted);
   if(ago) chips.push(`<span class="chip posted">🕒 ${ago}</span>`);
 
   const el = document.createElement("div");
-  el.className = "card";
+  el.className = "card" + (isApplied ? " applied" : "");
   el.dataset.jobId = job.id;
   el.innerHTML = `
     <div class="card-top">
@@ -553,10 +660,12 @@ function addCard(job){
     <div class="desc">${(job.description || "No description provided.").replace(/</g,"&lt;")}…</div>
     <div class="card-foot">
       <a class="apply" href="${job.apply || '#'}" target="_blank" rel="noopener">Apply ↗</a>
+      <button class="appliedbtn ${isApplied?'on':''}" title="Mark as applied">${isApplied?'✓ Applied':'Mark applied'}</button>
       <button class="save ${isSaved?'on':''}" title="Save">${isSaved?'★':'☆'}</button>
     </div>
     <div class="src">via ${job.publisher || "JSearch"}</div>`;
   el.querySelector(".save").onclick = e => toggleSave(job, e.currentTarget);
+  el.querySelector(".appliedbtn").onclick = e => toggleApplied(job, e.currentTarget, el);
   $("grid").appendChild(el);
 }
 
