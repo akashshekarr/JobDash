@@ -172,16 +172,114 @@
     .searchbar { grid-template-columns: 1fr; }
     .field + .field { border-left: none; border-top: 1px solid var(--line); }
   }
+
+  /* ---- Auth / login screen ---- */
+  #authScreen {
+    position: fixed; inset: 0; display: grid; place-items: center; z-index: 100;
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(255,95,95,.18), transparent 60%),
+      radial-gradient(700px 500px at 0% 0%, rgba(198,242,95,.10), transparent 55%),
+      var(--bg);
+    padding: 24px;
+  }
+  .auth-card {
+    width: min(420px, 100%); background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 38px 34px; box-shadow: var(--shadow);
+  }
+  .auth-card h1 {
+    font-family: 'Fraunces', serif; font-weight: 900; font-size: 32px; margin-bottom: 6px;
+  }
+  .auth-card h1 span { color: var(--accent); }
+  .auth-card .sub { color: var(--muted); font-size: 14px; margin-bottom: 26px; }
+  .auth-field { margin-bottom: 14px; }
+  .auth-field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; letter-spacing: .5px; }
+  .auth-field input {
+    width: 100%; background: var(--bg-soft); border: 1px solid var(--line); border-radius: 11px;
+    color: var(--ink); font-family: inherit; font-size: 15px; padding: 12px 14px; outline: none;
+    transition: .15s;
+  }
+  .auth-field input:focus { border-color: var(--accent); }
+  .auth-btn {
+    width: 100%; background: var(--accent); color: #150505; border: none; border-radius: 11px;
+    font-family: inherit; font-weight: 700; font-size: 15px; padding: 13px; cursor: pointer;
+    transition: .15s; margin-top: 6px;
+  }
+  .auth-btn:hover { background: #ff7373; }
+  .auth-btn:disabled { opacity: .6; cursor: wait; }
+  .google-btn {
+    width: 100%; background: #fff; color: #1f1f1f; border: none; border-radius: 11px;
+    font-family: inherit; font-weight: 600; font-size: 15px; padding: 12px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 10px; transition: .15s;
+  }
+  .google-btn:hover { background: #f1f1f1; }
+  .google-btn svg { width: 18px; height: 18px; }
+  .divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; margin: 20px 0; }
+  .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .auth-toggle { text-align: center; margin-top: 20px; font-size: 14px; color: var(--muted); }
+  .auth-toggle a { color: var(--accent-2); cursor: pointer; text-decoration: none; font-weight: 600; }
+  .auth-msg { font-size: 13px; margin-top: 14px; min-height: 18px; text-align: center; }
+  .auth-msg.err { color: var(--accent); }
+  .auth-msg.ok { color: var(--lime); }
+  .user-pill {
+    background: var(--panel); border: 1px solid var(--line); color: var(--ink);
+    padding: 9px 14px; border-radius: 999px; font-size: 13px; display: flex; align-items: center; gap: 8px;
+  }
+  .user-pill button {
+    background: none; border: none; color: var(--accent); cursor: pointer; font-family: inherit;
+    font-size: 13px; font-weight: 600;
+  }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  #app { display: none; }
 </style>
 </head>
 <body>
+
+<!-- Supabase JS (v2) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- ===== LOGIN SCREEN ===== -->
+<div id="authScreen">
+  <div class="auth-card">
+    <h1>Job<span>Dash</span></h1>
+    <div class="sub" id="authSub">Sign in to search and save jobs.</div>
+
+    <button class="google-btn" onclick="signInGoogle()">
+      <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+
+    <div class="divider">or</div>
+
+    <div class="auth-field">
+      <label>Email</label>
+      <input id="authEmail" type="email" placeholder="you@example.com" />
+    </div>
+    <div class="auth-field">
+      <label>Password</label>
+      <input id="authPassword" type="password" placeholder="••••••••" />
+    </div>
+    <button class="auth-btn" id="authSubmit" onclick="submitAuth()">Sign in</button>
+
+    <div class="auth-msg" id="authMsg"></div>
+
+    <div class="auth-toggle" id="authToggle">
+      New here? <a onclick="toggleMode()">Create an account</a>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN APP ===== -->
+<div id="app">
 <div class="wrap">
   <header>
     <div class="brand">
       <h1>Job<span>Dash</span></h1>
       <span class="tag">live roles · one search</span>
     </div>
-    <button class="saved-pill" onclick="openDrawer()">★ Saved <b id="savedCount">0</b></button>
+    <div class="header-right">
+      <button class="saved-pill" onclick="openDrawer()">★ Saved <b id="savedCount">0</b></button>
+      <div class="user-pill"><span id="userEmail">—</span><button onclick="signOut()">Sign out</button></div>
+    </div>
   </header>
 
   <div class="hero">Search once.<br>See <em>every</em> opening.</div>
@@ -230,15 +328,147 @@
     <div id="savedList"></div>
   </div>
 </div>
+</div><!-- /#app -->
 
 <script>
+/* ===== Supabase setup ===== */
+const SUPABASE_URL = "https://lduwocrmzhkxvsgqdwle.supabase.co";
+const SUPABASE_KEY = "sb_publishable_G_wfess3lj59TsRIcXGCOw_l1szEPCh";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 let page = 1, lastQ = "", lastLoc = "", lastType = "", lastArr = "", busy = false;
-let saved = JSON.parse(localStorage.getItem("jobdash_saved") || "[]");
+let saved = [];          // loaded from Supabase for the logged-in user
+let authMode = "signin"; // or "signup"
+let currentUser = null;
 
 const $ = id => document.getElementById(id);
 
+/* ===== Auth flow ===== */
+function toggleMode(){
+  authMode = authMode === "signin" ? "signup" : "signin";
+  $("authSubmit").textContent = authMode === "signin" ? "Sign in" : "Create account";
+  $("authSub").textContent = authMode === "signin"
+    ? "Sign in to search and save jobs."
+    : "Create an account to save jobs across devices.";
+  $("authToggle").innerHTML = authMode === "signin"
+    ? 'New here? <a onclick="toggleMode()">Create an account</a>'
+    : 'Already have an account? <a onclick="toggleMode()">Sign in</a>';
+  setAuthMsg("");
+}
+
+function setAuthMsg(text, kind){
+  const el = $("authMsg");
+  el.textContent = text;
+  el.className = "auth-msg" + (kind ? " " + kind : "");
+}
+
+async function submitAuth(){
+  const email = $("authEmail").value.trim();
+  const password = $("authPassword").value;
+  if(!email || !password){ setAuthMsg("Enter email and password.", "err"); return; }
+  $("authSubmit").disabled = true;
+  setAuthMsg(authMode === "signin" ? "Signing in…" : "Creating account…");
+
+  try {
+    if(authMode === "signin"){
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if(error) throw error;
+    } else {
+      const { error } = await sb.auth.signUp({ email, password });
+      if(error) throw error;
+      setAuthMsg("Account created. If email confirmation is on, check your inbox, then sign in.", "ok");
+      $("authSubmit").disabled = false;
+      return;
+    }
+  } catch(err){
+    setAuthMsg(err.message || "Authentication failed.", "err");
+    $("authSubmit").disabled = false;
+  }
+}
+
+async function signInGoogle(){
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: window.location.origin }
+  });
+  if(error) setAuthMsg(error.message, "err");
+}
+
+async function signOut(){
+  await sb.auth.signOut();
+  // onAuthStateChange handles the UI switch.
+}
+
+// React to login/logout.
+sb.auth.onAuthStateChange((_event, session) => {
+  if(session && session.user){
+    currentUser = session.user;
+    showApp();
+  } else {
+    currentUser = null;
+    showLogin();
+  }
+});
+
+function showApp(){
+  $("authScreen").style.display = "none";
+  $("app").style.display = "block";
+  $("userEmail").textContent = currentUser.email || "Signed in";
+  $("authSubmit").disabled = false;
+  loadSaved();
+}
+
+function showLogin(){
+  $("app").style.display = "none";
+  $("authScreen").style.display = "grid";
+  saved = []; renderSavedCount();
+}
+
 function renderSavedCount(){ $("savedCount").textContent = saved.length; }
-renderSavedCount();
+
+/* ===== Saved jobs via Supabase ===== */
+async function loadSaved(){
+  const { data, error } = await sb
+    .from("saved_jobs")
+    .select("job_id, job_data")
+    .order("created_at", { ascending: false });
+  if(error){ console.error(error); return; }
+  saved = (data || []).map(r => r.job_data);
+  renderSavedCount();
+  // refresh any visible star states
+  document.querySelectorAll(".card").forEach(c => {
+    const id = c.dataset.jobId;
+    const btn = c.querySelector(".save");
+    if(!btn) return;
+    const on = saved.some(s => s.id === id);
+    btn.classList.toggle("on", on);
+    btn.textContent = on ? "★" : "☆";
+  });
+}
+
+async function toggleSave(job, btn){
+  const isSaved = saved.some(s => s.id === job.id);
+  try {
+    if(isSaved){
+      const { error } = await sb.from("saved_jobs").delete()
+        .eq("user_id", currentUser.id).eq("job_id", job.id);
+      if(error) throw error;
+      saved = saved.filter(s => s.id !== job.id);
+      btn.classList.remove("on"); btn.textContent = "☆";
+    } else {
+      const { error } = await sb.from("saved_jobs").insert({
+        user_id: currentUser.id, job_id: job.id, job_data: job
+      });
+      if(error) throw error;
+      saved.push(job);
+      btn.classList.add("on"); btn.textContent = "★";
+    }
+    renderSavedCount();
+  } catch(err){
+    console.error(err);
+    alert("Couldn't update saved job: " + (err.message || "error"));
+  }
+}
 
 async function newSearch(){
   const q = $("q").value.trim();
@@ -313,6 +543,7 @@ function addCard(job){
 
   const el = document.createElement("div");
   el.className = "card";
+  el.dataset.jobId = job.id;
   el.innerHTML = `
     <div class="card-top">
       ${logo}
@@ -329,14 +560,6 @@ function addCard(job){
   $("grid").appendChild(el);
 }
 
-function toggleSave(job, btn){
-  const i = saved.findIndex(s => s.id === job.id);
-  if(i >= 0){ saved.splice(i,1); btn.classList.remove("on"); btn.textContent="☆"; }
-  else { saved.push(job); btn.classList.add("on"); btn.textContent="★"; }
-  localStorage.setItem("jobdash_saved", JSON.stringify(saved));
-  renderSavedCount();
-}
-
 function openDrawer(){
   const list = $("savedList");
   list.innerHTML = saved.length ? "" : `<div class="empty">No saved jobs yet.</div>`;
@@ -346,13 +569,19 @@ function openDrawer(){
     m.innerHTML = `<h4>${job.title}</h4><div class="co">${job.company} · ${job.location}</div>
       <div class="mini-acts"><a href="${job.apply||'#'}" target="_blank" rel="noopener">Apply ↗</a>
       <button>Remove</button></div>`;
-    m.querySelector("button").onclick = () => {
-      saved = saved.filter(s => s.id !== job.id);
-      localStorage.setItem("jobdash_saved", JSON.stringify(saved));
-      renderSavedCount(); openDrawer();
-      document.querySelectorAll(".card").forEach(c => {
-        // refresh star states if same job visible
-      });
+    m.querySelector("button").onclick = async () => {
+      try {
+        const { error } = await sb.from("saved_jobs").delete()
+          .eq("user_id", currentUser.id).eq("job_id", job.id);
+        if(error) throw error;
+        saved = saved.filter(s => s.id !== job.id);
+        renderSavedCount(); openDrawer();
+        // un-star a matching visible card
+        const card = document.querySelector(`.card[data-job-id="${CSS.escape(job.id)}"] .save`);
+        if(card){ card.classList.remove("on"); card.textContent = "☆"; }
+      } catch(err){
+        alert("Couldn't remove: " + (err.message || "error"));
+      }
     };
     list.appendChild(m);
   });
