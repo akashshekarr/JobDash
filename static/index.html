@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>JobDash — find your next role</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0c0a14;
+    --bg-soft: #15121f;
+    --panel: #1b1726;
+    --panel-2: #221d31;
+    --ink: #f2eef9;
+    --muted: #9a91b4;
+    --line: #2c2640;
+    --accent: #ff5f5f;
+    --accent-2: #ffd166;
+    --lime: #c6f25f;
+    --radius: 18px;
+    --shadow: 0 20px 60px rgba(0,0,0,.45);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Outfit', sans-serif;
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(255,95,95,.18), transparent 60%),
+      radial-gradient(700px 500px at 0% 0%, rgba(198,242,95,.10), transparent 55%),
+      var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 38px 24px 80px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 36px; }
+  .brand { display: flex; align-items: baseline; gap: 12px; }
+  .brand h1 {
+    font-family: 'Fraunces', serif; font-weight: 900; font-size: 30px;
+    letter-spacing: -.5px;
+  }
+  .brand h1 span { color: var(--accent); }
+  .brand .tag { color: var(--muted); font-size: 13px; }
+  .saved-pill {
+    background: var(--panel); border: 1px solid var(--line); color: var(--ink);
+    padding: 9px 16px; border-radius: 999px; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: .2s; display: flex; align-items: center; gap: 8px;
+  }
+  .saved-pill:hover { border-color: var(--accent); }
+  .saved-pill b { color: var(--accent-2); }
+
+  .hero {
+    font-family: 'Fraunces', serif; font-weight: 900; font-size: clamp(34px, 6vw, 62px);
+    line-height: 1.02; letter-spacing: -1.5px; margin-bottom: 28px; max-width: 760px;
+  }
+  .hero em { font-style: italic; color: var(--lime); }
+
+  .searchbar {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 14px; display: grid; grid-template-columns: 1.7fr 1.1fr .9fr .9fr auto; gap: 10px;
+    box-shadow: var(--shadow);
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; padding: 6px 10px; position: relative; }
+  .field label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  .field input, .field select {
+    background: transparent; border: none; color: var(--ink); font-family: inherit;
+    font-size: 15px; outline: none; width: 100%;
+  }
+  .field select { cursor: pointer; }
+  .field select option { background: var(--panel-2); }
+  .field + .field { border-left: 1px solid var(--line); }
+
+  /* autocomplete dropdown */
+  .suggest {
+    position: absolute; top: 100%; left: 0; right: 0; margin-top: 8px; z-index: 30;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: var(--shadow); overflow: hidden; display: none; max-height: 260px; overflow-y: auto;
+  }
+  .suggest.show { display: block; }
+  .suggest div {
+    padding: 11px 16px; font-size: 14px; cursor: pointer; color: var(--ink);
+    border-bottom: 1px solid var(--line);
+  }
+  .suggest div:last-child { border-bottom: none; }
+  .suggest div:hover, .suggest div.active { background: var(--accent); color: #150505; }
+  .suggest div b { color: var(--accent-2); font-weight: 700; }
+  .suggest div:hover b, .suggest div.active b { color: #150505; }
+  .go {
+    background: var(--accent); color: #150505; border: none; border-radius: 12px;
+    font-family: inherit; font-weight: 700; font-size: 15px; padding: 0 26px; cursor: pointer;
+    transition: .15s; letter-spacing: .2px;
+  }
+  .go:hover { transform: translateY(-1px); background: #ff7373; }
+  .go:disabled { opacity: .5; cursor: wait; }
+
+  .status { margin: 26px 4px 18px; color: var(--muted); font-size: 14px; min-height: 20px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; }
+  .card {
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--line); border-radius: var(--radius); padding: 20px;
+    display: flex; flex-direction: column; gap: 14px; position: relative;
+    transition: .2s; animation: rise .5s both;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  .card:hover { border-color: var(--accent); transform: translateY(-3px); }
+  .card-top { display: flex; gap: 13px; align-items: flex-start; }
+  .logo {
+    width: 46px; height: 46px; border-radius: 11px; object-fit: contain; background: #fff;
+    flex-shrink: 0; padding: 5px;
+  }
+  .logo.ph {
+    background: var(--bg-soft); display: grid; place-items: center; color: var(--accent-2);
+    font-family: 'Fraunces', serif; font-weight: 900; font-size: 20px;
+  }
+  .card h3 { font-size: 17px; font-weight: 600; line-height: 1.25; }
+  .card .co { color: var(--muted); font-size: 13.5px; margin-top: 2px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip {
+    font-size: 11.5px; padding: 4px 10px; border-radius: 999px; background: var(--bg-soft);
+    border: 1px solid var(--line); color: var(--muted);
+  }
+  .chip.remote { color: var(--lime); border-color: rgba(198,242,95,.3); }
+  .chip.hybrid { color: var(--accent-2); border-color: rgba(255,209,102,.3); }
+  .chip.posted { color: var(--muted); }
+  .desc { color: var(--muted); font-size: 13px; line-height: 1.5; flex-grow: 1; }
+  .card-foot { display: flex; gap: 10px; align-items: center; margin-top: 2px; }
+  .apply {
+    flex-grow: 1; text-align: center; background: var(--ink); color: #120f1c; text-decoration: none;
+    font-weight: 600; font-size: 14px; padding: 10px; border-radius: 11px; transition: .15s;
+  }
+  .apply:hover { background: var(--accent-2); }
+  .save {
+    background: var(--bg-soft); border: 1px solid var(--line); color: var(--muted);
+    width: 42px; height: 42px; border-radius: 11px; cursor: pointer; font-size: 18px;
+    transition: .15s; flex-shrink: 0;
+  }
+  .save:hover { border-color: var(--accent); color: var(--accent); }
+  .save.on { color: var(--accent); border-color: var(--accent); background: rgba(255,95,95,.1); }
+  .src { font-size: 11px; color: var(--muted); opacity: .7; }
+
+  .more {
+    display: block; margin: 34px auto 0; background: var(--panel); border: 1px solid var(--line);
+    color: var(--ink); font-family: inherit; font-size: 15px; font-weight: 500; padding: 13px 34px;
+    border-radius: 999px; cursor: pointer; transition: .2s;
+  }
+  .more:hover { border-color: var(--lime); }
+
+  .empty { text-align: center; color: var(--muted); padding: 60px 20px; }
+  .empty .big { font-family: 'Fraunces', serif; font-size: 22px; color: var(--ink); margin-bottom: 6px; }
+
+  /* saved drawer */
+  .drawer { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; z-index: 50; }
+  .drawer.open { display: block; }
+  .drawer-panel {
+    position: absolute; right: 0; top: 0; height: 100%; width: min(420px, 90vw);
+    background: var(--bg-soft); border-left: 1px solid var(--line); padding: 26px;
+    overflow-y: auto; box-shadow: var(--shadow);
+  }
+  .drawer-panel h2 { font-family: 'Fraunces', serif; font-size: 24px; margin-bottom: 18px; display: flex; justify-content: space-between; }
+  .drawer-panel h2 .x { cursor: pointer; color: var(--muted); }
+  .mini { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 11px; }
+  .mini h4 { font-size: 14.5px; font-weight: 600; }
+  .mini .co { color: var(--muted); font-size: 12.5px; margin: 3px 0 9px; }
+  .mini-acts { display: flex; gap: 8px; }
+  .mini-acts a { font-size: 12.5px; color: var(--accent-2); text-decoration: none; }
+  .mini-acts button { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 12.5px; font-family: inherit; }
+
+  @media (max-width: 720px) {
+    .searchbar { grid-template-columns: 1fr; }
+    .field + .field { border-left: none; border-top: 1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>Job<span>Dash</span></h1>
+      <span class="tag">live roles · one search</span>
+    </div>
+    <button class="saved-pill" onclick="openDrawer()">★ Saved <b id="savedCount">0</b></button>
+  </header>
+
+  <div class="hero">Search once.<br>See <em>every</em> opening.</div>
+
+  <div class="searchbar">
+    <div class="field">
+      <label>Keyword / title</label>
+      <input id="q" placeholder="e.g. data engineer" autocomplete="off" />
+      <div class="suggest" id="qSuggest"></div>
+    </div>
+    <div class="field">
+      <label>Location</label>
+      <input id="loc" placeholder="e.g. Bengaluru" autocomplete="off" />
+      <div class="suggest" id="locSuggest"></div>
+    </div>
+    <div class="field">
+      <label>Type</label>
+      <select id="type">
+        <option value="">Any</option>
+        <option value="FULLTIME">Full-time</option>
+        <option value="PARTTIME">Part-time</option>
+        <option value="CONTRACTOR">Contract</option>
+        <option value="INTERN">Internship</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Work mode</label>
+      <select id="arrangement">
+        <option value="">Any</option>
+        <option value="ONSITE">On-site</option>
+        <option value="HYBRID">Hybrid</option>
+        <option value="WFH">WFH</option>
+      </select>
+    </div>
+    <button class="go" id="go" onclick="newSearch()">Search</button>
+  </div>
+
+  <div class="status" id="status">Type a role and hit search to pull live listings.</div>
+  <div class="grid" id="grid"></div>
+  <button class="more" id="more" style="display:none" onclick="loadMore()">Load more</button>
+</div>
+
+<div class="drawer" id="drawer" onclick="if(event.target===this)closeDrawer()">
+  <div class="drawer-panel">
+    <h2>Saved jobs <span class="x" onclick="closeDrawer()">✕</span></h2>
+    <div id="savedList"></div>
+  </div>
+</div>
+
+<script>
+let page = 1, lastQ = "", lastLoc = "", lastType = "", lastArr = "", busy = false;
+let saved = JSON.parse(localStorage.getItem("jobdash_saved") || "[]");
+
+const $ = id => document.getElementById(id);
+
+function renderSavedCount(){ $("savedCount").textContent = saved.length; }
+renderSavedCount();
+
+async function newSearch(){
+  const q = $("q").value.trim();
+  if(!q){ $("status").textContent = "Enter a keyword first."; return; }
+  page = 1; lastQ = q; lastLoc = $("loc").value.trim();
+  lastType = $("type").value; lastArr = $("arrangement").value;
+  closeSuggest();
+  $("grid").innerHTML = "";
+  await fetchJobs(true);
+}
+
+async function loadMore(){ page++; await fetchJobs(false); }
+
+async function fetchJobs(fresh){
+  if(busy) return;
+  busy = true; $("go").disabled = true;
+  $("status").textContent = fresh ? "Searching live listings…" : "Loading more…";
+  $("more").style.display = "none";
+
+  const params = new URLSearchParams({ q: lastQ, page });
+  if(lastLoc) params.set("location", lastLoc);
+  if(lastType) params.set("employment_type", lastType);
+  if(lastArr) params.set("work_arrangement", lastArr);
+
+  try {
+    const res = await fetch("/api/search?" + params);
+    if(!res.ok){ const e = await res.json().catch(()=>({})); throw new Error(e.detail || res.status); }
+    const data = await res.json();
+    if(fresh && data.jobs.length === 0){
+      $("grid").innerHTML = `<div class="empty"><div class="big">No roles found</div>Try a broader keyword or clear the location.</div>`;
+      $("status").textContent = "";
+    } else {
+      data.jobs.forEach(addCard);
+      $("status").textContent = `Showing results for “${lastQ}”${lastLoc ? " in " + lastLoc : ""}.`;
+      $("more").style.display = data.jobs.length ? "block" : "none";
+    }
+  } catch(err){
+    $("status").textContent = "⚠ " + err.message;
+  } finally {
+    busy = false; $("go").disabled = false;
+  }
+}
+
+function timeAgo(iso){
+  if(!iso) return "";
+  const then = new Date(iso);
+  if(isNaN(then)) return "";
+  const mins = Math.floor((Date.now() - then) / 60000);
+  if(mins < 1) return "just now";
+  if(mins < 60) return mins + "m ago";
+  const hrs = Math.floor(mins / 60);
+  if(hrs < 24) return hrs + "h ago";
+  const days = Math.floor(hrs / 24);
+  if(days < 30) return days + (days === 1 ? " day ago" : " days ago");
+  const months = Math.floor(days / 30);
+  return months + (months === 1 ? " month ago" : " months ago");
+}
+
+function addCard(job){
+  const isSaved = saved.some(s => s.id === job.id);
+  const logo = job.logo
+    ? `<img class="logo" src="${job.logo}" onerror="this.outerHTML='<div class=\\'logo ph\\'>${(job.company||'?')[0]}</div>'" />`
+    : `<div class="logo ph">${(job.company||'?')[0]}</div>`;
+  const chips = [];
+  if(job.type) chips.push(`<span class="chip">${job.type.replace('_',' ')}</span>`);
+  if(job.arrangement === "WFH") chips.push(`<span class="chip remote">WFH</span>`);
+  else if(job.arrangement === "Hybrid") chips.push(`<span class="chip hybrid">Hybrid</span>`);
+  else if(job.arrangement) chips.push(`<span class="chip">On-site</span>`);
+  chips.push(`<span class="chip">${job.location}</span>`);
+  const ago = timeAgo(job.posted);
+  if(ago) chips.push(`<span class="chip posted">🕒 ${ago}</span>`);
+
+  const el = document.createElement("div");
+  el.className = "card";
+  el.innerHTML = `
+    <div class="card-top">
+      ${logo}
+      <div><h3>${job.title || "Untitled role"}</h3><div class="co">${job.company || "Unknown company"}</div></div>
+    </div>
+    <div class="chips">${chips.join("")}</div>
+    <div class="desc">${(job.description || "No description provided.").replace(/</g,"&lt;")}…</div>
+    <div class="card-foot">
+      <a class="apply" href="${job.apply || '#'}" target="_blank" rel="noopener">Apply ↗</a>
+      <button class="save ${isSaved?'on':''}" title="Save">${isSaved?'★':'☆'}</button>
+    </div>
+    <div class="src">via ${job.publisher || "JSearch"}</div>`;
+  el.querySelector(".save").onclick = e => toggleSave(job, e.currentTarget);
+  $("grid").appendChild(el);
+}
+
+function toggleSave(job, btn){
+  const i = saved.findIndex(s => s.id === job.id);
+  if(i >= 0){ saved.splice(i,1); btn.classList.remove("on"); btn.textContent="☆"; }
+  else { saved.push(job); btn.classList.add("on"); btn.textContent="★"; }
+  localStorage.setItem("jobdash_saved", JSON.stringify(saved));
+  renderSavedCount();
+}
+
+function openDrawer(){
+  const list = $("savedList");
+  list.innerHTML = saved.length ? "" : `<div class="empty">No saved jobs yet.</div>`;
+  saved.forEach(job => {
+    const m = document.createElement("div");
+    m.className = "mini";
+    m.innerHTML = `<h4>${job.title}</h4><div class="co">${job.company} · ${job.location}</div>
+      <div class="mini-acts"><a href="${job.apply||'#'}" target="_blank" rel="noopener">Apply ↗</a>
+      <button>Remove</button></div>`;
+    m.querySelector("button").onclick = () => {
+      saved = saved.filter(s => s.id !== job.id);
+      localStorage.setItem("jobdash_saved", JSON.stringify(saved));
+      renderSavedCount(); openDrawer();
+      document.querySelectorAll(".card").forEach(c => {
+        // refresh star states if same job visible
+      });
+    };
+    list.appendChild(m);
+  });
+  $("drawer").classList.add("open");
+}
+function closeDrawer(){ $("drawer").classList.remove("open"); }
+
+$("q").addEventListener("keydown", e => { if(e.key === "Enter" && !$("qSuggest").classList.contains("show")) newSearch(); });
+$("loc").addEventListener("keydown", e => { if(e.key === "Enter" && !$("locSuggest").classList.contains("show")) newSearch(); });
+
+/* ---------- Autocomplete ---------- */
+const TITLES = [
+  "Software Engineer","Senior Software Engineer","Frontend Developer","Backend Developer",
+  "Full Stack Developer","Data Engineer","Data Analyst","Data Scientist","Machine Learning Engineer",
+  "DevOps Engineer","Cloud Engineer","Site Reliability Engineer","QA Engineer","Test Automation Engineer",
+  "Cybersecurity Analyst","Security Engineer","Information Security Analyst","Penetration Tester",
+  "Product Manager","Project Manager","Program Manager","Business Analyst","Scrum Master",
+  "UI/UX Designer","Product Designer","Graphic Designer","Mobile Developer","Android Developer",
+  "iOS Developer","Database Administrator","Network Engineer","Systems Administrator","IT Support",
+  "Solutions Architect","Engineering Manager","Technical Lead","AI Engineer","Prompt Engineer",
+  "Digital Marketing Manager","SEO Specialist","Content Writer","HR Manager","Recruiter",
+  "Financial Analyst","Accountant","Sales Executive","Customer Success Manager","Operations Manager"
+];
+const CITIES = [
+  "Bengaluru","Hyderabad","Mumbai","Pune","Chennai","Delhi","Gurgaon","Noida","Kolkata","Ahmedabad",
+  "Jaipur","Kochi","Coimbatore","Indore","Chandigarh","Thiruvananthapuram","Visakhapatnam","Nagpur",
+  "Remote","London","New York","San Francisco","Singapore","Dubai","Toronto","Berlin","Sydney","Bangalore"
+];
+
+function setupAutocomplete(inputId, boxId, source){
+  const input = $(inputId), box = $(boxId);
+  let activeIdx = -1, items = [];
+
+  function render(matches){
+    activeIdx = -1; items = matches;
+    if(!matches.length){ box.classList.remove("show"); box.innerHTML = ""; return; }
+    const val = input.value.trim().toLowerCase();
+    box.innerHTML = matches.map(m => {
+      const i = m.toLowerCase().indexOf(val);
+      const html = i >= 0
+        ? m.slice(0,i) + "<b>" + m.slice(i, i+val.length) + "</b>" + m.slice(i+val.length)
+        : m;
+      return `<div>${html}</div>`;
+    }).join("");
+    [...box.children].forEach((el, idx) => {
+      el.onclick = () => { input.value = matches[idx]; closeSuggest(); input.focus(); };
+    });
+    box.classList.add("show");
+  }
+
+  input.addEventListener("input", () => {
+    const v = input.value.trim().toLowerCase();
+    if(!v){ box.classList.remove("show"); return; }
+    render(source.filter(s => s.toLowerCase().includes(v)).slice(0, 8));
+  });
+
+  input.addEventListener("keydown", e => {
+    if(!box.classList.contains("show")) return;
+    const els = [...box.children];
+    if(e.key === "ArrowDown"){ e.preventDefault(); activeIdx = Math.min(activeIdx+1, els.length-1); }
+    else if(e.key === "ArrowUp"){ e.preventDefault(); activeIdx = Math.max(activeIdx-1, 0); }
+    else if(e.key === "Enter" && activeIdx >= 0){ e.preventDefault(); input.value = items[activeIdx]; closeSuggest(); return; }
+    else if(e.key === "Escape"){ closeSuggest(); return; }
+    els.forEach((el,i) => el.classList.toggle("active", i === activeIdx));
+  });
+
+  input.addEventListener("blur", () => setTimeout(() => box.classList.remove("show"), 150));
+}
+
+function closeSuggest(){
+  $("qSuggest").classList.remove("show");
+  $("locSuggest").classList.remove("show");
+}
+
+setupAutocomplete("q", "qSuggest", TITLES);
+setupAutocomplete("loc", "locSuggest", CITIES);
+</script>
+</body>
+</html>
